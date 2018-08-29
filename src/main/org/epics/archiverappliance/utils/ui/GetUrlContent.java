@@ -59,9 +59,19 @@ public class GetUrlContent {
 	 * @param urlStr URL
 	 * @return URL content 
 	 */
+	
+	public static String fixLocalHost(String urlStr) {
+	if (urlStr.split(":")[0].equals("localhost")) {
+		urlStr = "http://" + urlStr;
+	}
+		return urlStr;
+	}
+		
 	public static String getURLContent(String urlStr) {
 		try {
 			logger.debug("Getting the contents of " + urlStr + " as a string.");
+			checkURL(urlStr);
+			urlStr = fixLocalHost(urlStr);
 			try (InputStream is = getURLContentAsStream(urlStr)) {
 				ByteArrayOutputStream bos = new ByteArrayOutputStream();
 				IOUtils.copy(is, bos);
@@ -85,6 +95,8 @@ public class GetUrlContent {
 	 * @return URL content as JSONArray 
 	 */
 	public static JSONArray getURLContentAsJSONArray(String urlStr, boolean logErrors) {
+		checkURL(urlStr);
+		urlStr = fixLocalHost(urlStr);
 		try {
 			logger.debug("Getting the contents of " + urlStr + " as a JSON array.");
 			JSONParser parser=new JSONParser();
@@ -115,10 +127,15 @@ public class GetUrlContent {
 	 * @return URL content as a JSON Object
 	 */
 	public static JSONObject getURLContentAsJSONObject(String urlStr, boolean logErrors) {
+		checkURL(urlStr);
+		urlStr = fixLocalHost(urlStr);
 		try {
 			logger.debug("Getting the contents of " + urlStr + " as a JSON object.");
-			JSONParser parser=new JSONParser();
-			try (InputStream is = getURLContentAsStream(urlStr)) {
+			JSONParser parser = new JSONParser();
+            checkURL(urlStr);
+			try (
+				InputStream is = getURLContentAsStream(urlStr)
+				) {
 				return (JSONObject) parser.parse(new InputStreamReader(is));
 			}
 		} catch (IOException ex) {
@@ -232,6 +249,7 @@ public class GetUrlContent {
 	 */
 	public static JSONObject postDataAndGetContentAsJSONObject(String url, LinkedList<JSONObject> array) throws IOException {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
+		url = fixLocalHost(url);
 		HttpPost postMethod = new HttpPost(url);
 		postMethod.addHeader(ARCHAPPL_COMPONENT, "true");
 		postMethod.addHeader("Content-Type", MimeTypeConstants.APPLICATION_JSON);
@@ -264,6 +282,7 @@ public class GetUrlContent {
 	 */
 	public static JSONArray postDataAndGetContentAsJSONArray(String url, LinkedList<JSONObject> array) throws IOException {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
+		url = fixLocalHost(url);
 		HttpPost postMethod = new HttpPost(url);
 		postMethod.addHeader(ARCHAPPL_COMPONENT, "true");
 		postMethod.addHeader("Content-Type", MimeTypeConstants.APPLICATION_JSON);
@@ -296,6 +315,7 @@ public class GetUrlContent {
 	 */
 	public static JSONObject postObjectAndGetContentAsJSONObject(String url, JSONObject object) throws IOException {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
+		url = fixLocalHost(url);
 		HttpPost postMethod = new HttpPost(url);
 		postMethod.addHeader(ARCHAPPL_COMPONENT, "true");
 		postMethod.addHeader("Content-Type", MimeTypeConstants.APPLICATION_JSON);
@@ -339,6 +359,7 @@ public class GetUrlContent {
 		}
 		
 		CloseableHttpClient httpclient = HttpClients.createDefault();
+		url = fixLocalHost(url);
 		HttpPost postMethod = new HttpPost(url);
 		postMethod.addHeader("Content-Type", MimeTypeConstants.APPLICATION_FORM_URLENCODED);
 		postMethod.addHeader("Connection", "close"); // https://www.nuxeo.com/blog/using-httpclient-properly-avoid-closewait-tcp-connections/
@@ -371,10 +392,15 @@ public class GetUrlContent {
 	public static boolean checkURL(String urlStr) {
 		try {
 			logger.debug("Testing if " + urlStr + " is valid");
-			try (InputStream is = getURLContentAsStream(urlStr)) {
+			if (urlStr.split(":")[0].equals("localhost")) {
+				urlStr = "http://" + urlStr;
+			}
+			try (InputStream is = getURLContentAsStream(urlStr))
+			{
 				return true;
 			}
 		} catch (IOException ex) {
+			logger.debug(ex);
 			// Ignore any exceptions here as we are only testing if this is a valid URL.
 		}
 		return false;
@@ -383,6 +409,7 @@ public class GetUrlContent {
 	
 	private static InputStream getURLContentAsStream(String serverURL) throws IOException {
 		CloseableHttpClient httpclient = HttpClients.createDefault();
+		serverURL = fixLocalHost(serverURL);
 		HttpGet getMethod = new HttpGet(serverURL);
 		getMethod.addHeader("Connection", "close"); // https://www.nuxeo.com/blog/using-httpclient-properly-avoid-closewait-tcp-connections/
 		getMethod.addHeader(ARCHAPPL_COMPONENT, "true");
@@ -413,6 +440,7 @@ public class GetUrlContent {
 	 */
 	public static void proxyURL(String redirectURIStr, HttpServletResponse resp) throws IOException { 
 		CloseableHttpClient httpclient = HttpClients.createDefault();
+		redirectURIStr = fixLocalHost(redirectURIStr);
 		HttpGet getMethod = new HttpGet(redirectURIStr);
 		getMethod.addHeader("Connection", "close"); // https://www.nuxeo.com/blog/using-httpclient-properly-avoid-closewait-tcp-connections/
 		try(CloseableHttpResponse response = httpclient.execute(getMethod)) {
