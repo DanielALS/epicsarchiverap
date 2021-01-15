@@ -1,0 +1,28 @@
+# Custom Persistence Layer for the ALS
+This class replaces the built in that uses JSON strings.
+
+The idea is create and use a custom MySQL table(s) that have columns defined for
+all (almost all) the keys in the JSON that is currently stored in the PVTypeInfo table.
+
+This approach would ideally also be used on the ArciverRequest table to allow for constrings to be placed
+on which instance should accept various channels.
+
+This allows us to place constraints on the columns as well, as to add additional
+status columns for quick checks on the status of channels.
+#
+## Point to the New Class
+There's an environment variable that will point the AA to use this custom
+object.
+
+`ARCHAPPL_PERSISTENCE_LAYER` is points to the name of the class.
+`export ARCHAPPL_PERSISTENCE_LAYER=MySQLPersistenceALS`
+
+## The Guts
+The new class I'm calling, `MySQLPersistenceALS`, must implement this Java interface, `public class MySQLPersistence implements ConfigPersistence`.
+
+## Details
+I'll be basing my class off of this default one: `src/main/org/epics/archiverappliance/config/persistence/MySQLPersistence.java`
+
+## Setup Test Database Custom Table
+Start by cloning the existing `archappl` database, then run the script which will
+drop and add a new `PVTypeInfo` tables;
