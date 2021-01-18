@@ -1,4 +1,5 @@
 # ALS Fork of the AA
+## Custom Persistence Layer for the ALS
 The goal of this fork is to provide support for a management workflow when working with the Archiver Appliance.
 
 The appliance currently stores the channel meta data in a JSON string as a text blob when working with MariaDB. We'd prefer to have
@@ -24,3 +25,14 @@ Often times at the ALS, channels have been added to the AA during a maintance pe
 
 Instead of writing clients which decode JSON and use cumbersome logic, we prefer to add additional columns which store the state of channels. One idea, is to use a trigger on the PVInfoType table to create a row for every pvName in the ArchivePVRequest table, so simple select statements can be made to identify is a channel is being archived or not. An additional `isArchiving` columns could be used
 to simply statue report clients.
+
+# Point to the New Class
+There's an environment variable that will point the AA to use this custom
+object.
+
+`ARCHAPPL_PERSISTENCE_LAYER` is points to the name of the class.
+`export ARCHAPPL_PERSISTENCE_LAYER=MySQLPersistenceALS`
+
+## Setup Test Database Custom Table
+Start by cloning the existing `archappl` database, then run the script which will
+drop and add a new `PVTypeInfo` tables;
