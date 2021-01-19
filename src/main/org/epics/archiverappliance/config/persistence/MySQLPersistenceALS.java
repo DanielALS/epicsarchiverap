@@ -54,7 +54,6 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
     private static final String keys = "hostName,paused,creationTime,lowerAlarmLimit,precision,lowerCtrlLimit,units,computedBytesPerEvent,computedEventRate,usePVAccess,computedStorageRate,modificationTime,upperDisplayLimit,upperWarningLimit,DBRType,sts,mts,lts,upperAlarmLimit,userSpecifiedEventRate,useDBEProperties,hasReducedDataSet,lowerWarningLimit,chunkKey,applianceIdentity,scalar,upperCtrlLimit,lowerDisplayLimit,samplingPeriod,elementCount,samplingMethod,archiveFields,extraFields";
 
-    /* stays the same */
 	@Override
 	public List<String> getTypeInfoKeys() throws IOException {
 		return getKeys("SELECT pvName AS pvName FROM PVTypeInfo ORDER BY pvName;", "getTypeInfoKeys");
@@ -68,9 +67,9 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 	@Override
 	public void putTypeInfo(String pvName, PVTypeInfo typeInfo) throws IOException {
-        String query = "INSERT INTO PVTypeInfo (pvName," + keys + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        query += " ON DUPLICATE KEY UPDATE (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
-		putValueForKey(query , pvName, typeInfo, PVTypeInfo.class, "putTypeInfo");
+        String query = "INSERT INTO PVTypeInfo (pvName," + keys + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+        query += " ON DUPLICATE KEY UPDATE (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+		updatePVTypeInfo(query, pvName, typeInfo, "putTypeInfo");
 	}
 
 	@Override
@@ -83,9 +82,12 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		return getKeys("SELECT pvName AS pvName FROM ArchivePVRequests ORDER BY pvName;", "getArchivePVRequestsKeys");
 	}
 
+    //userSpecifedsamplingMethod, userSpecifedSamplingPeriod, controllingPV, policyName, skipCapacityPlanning, usePVAccess
+    // question about `skipCapacityPlanning`
 	@Override
 	public UserSpecifiedSamplingParams getArchivePVRequest(String pvName) throws IOException {
-		return getValueForKey("SELECT userParams AS userParams FROM ArchivePVRequests WHERE pvName = ?;", pvName, new UserSpecifiedSamplingParams(), UserSpecifiedSamplingParams.class, "getArchivePVRequest");
+        String query = "SELECT samplingMethod, samplingPeriod, controllingPV, policyName, usePVAcess FROM ArchivePVRequests WHERE pvName = ?;";
+		return get_archival_params(query, pvName, new UserSpecifiedSamplingParams(), "getArchivePVRequest");
 	}
 
 	@Override
@@ -137,7 +139,6 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 	public void removeAliasName(String pvName, String realName) throws IOException {
 		removeKey("DELETE FROM PVAliases WHERE pvName = ?;", pvName, "removeAliasName");
 	}
-
 
 	private List<String> getKeys(String sql, String msg) throws IOException {
 		LinkedList<String> ret = new LinkedList<String>();
@@ -264,21 +265,51 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 	}
 
 
+	private <T> void updatePVTypeInfo(String sql, String pvName, T obj, String msg) throws IOException {
+		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating: " + msg);
+		if(obj == null || obj.equals("")) throw new IOException("value cannot be null when updating:" + msg);
 
-	private <T> void putValueForKey(String sql, String key, T obj, Class<T> clazz, String msg) throws IOException {
-		if(key == null || key.equals("")) throw new IOException("key cannot be null when persisting " + msg);
-		if(obj == null || obj.equals("")) throw new IOException("value cannot be null when persisting " + msg);
+        List<String> cols = Arrays.asList(keys.split("\\s*,\\s*"));
 
 		try(Connection conn = theDataSource.getConnection()) {
-			JSONEncoder<T> encoder = JSONEncoder.getEncoder(clazz);
-			JSONObject jsonObj = encoder.encode(obj);
-			String jsonStr = jsonObj.toJSONString();
-
 			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
-				stmt.setString(1, key);
-				stmt.setString(2, jsonStr);
-				stmt.setString(3, jsonStr);
-				int rowsChanged = stmt.executeUpdate();
+				stmt.setString(1, pvName);
+				stmt.setString(2, cols[0]);
+				stmt.setTimeStamp(3, cols[1]);
+				stmt.setDouble(4, cols[2]);
+				stmt.setDouble(5, cols[3]);
+				stmt.setDouble(6, cols[4]);
+				stmt.setInt(7, cols[5]);
+				stmt.setDouble(8, cols[6]);
+				stmt.setString(9, cols[7]);
+				stmt.setDouble(10, cols[8]);
+				stmt.setTimeStamp(11, cols[9]);
+				stmt.setDouble(12, cols[10]);
+				stmt.setDouble(13, cols[11]);
+				stmt.setString(14, cols[12]);
+				stmt.setString(15, cols[13]);
+				stmt.setString(16, cols[14]);
+				stmt.setString(17, cols[15]);
+				stmt.setDouble(18, cols[16]);
+				stmt.setDouble(19, cols[17]);
+				stmt.setString(20, cols[18]);
+				stmt.setString(21, cols[19]);
+				stmt.setDouble(22, cols[20]);
+				stmt.setString(23, cols[21]);
+				stmt.setString(24, cols[22]);
+				stmt.setDouble(25, cols[23]);
+				stmt.setDouble(26, cols[24]);
+				stmt.setDouble(27, cols[25]);
+				stmt.setInt(28, cols[26]);
+				stmt.setString(29, cols[27]);
+				stmt.setString(30, cols[28]);
+				stmt.setFloat(30, cols[28]);
+				stmt.setFloat(31, cols[29]);
+				stmt.setFloat(32, cols[30]);
+				stmt.setString(33, cols[31]);
+				stmt.setTimeStamp(34, cols[33]);
+
+                int rowsChanged = stmt.executeUpdate();
 				if(rowsChanged != 1) {
 					logger.warn(rowsChanged + " rows changed when updating key  " + key + " in " + msg);
 				} else {
@@ -289,7 +320,6 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 			throw new IOException(ex);
 		}
 	}
-
 
 	private void putStringValueForKey(String sql, String key, String value, String msg) throws IOException {
 		if(key == null || key.equals("")) throw new IOException("key cannot be null when persisting " + msg);
@@ -329,18 +359,20 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		}
 	}
 
-	private <T> T getValueForKey(String sql, String key, T obj, Class<T> clazz, String msg) throws IOException {
-		if(key == null || key.equals("")) return null;
+    //userSpecifedsamplingMethod, userSpecifedSamplingPeriod, controllingPV, policyName, usePVAccess
+	private UserSpecifiedSamplingParams get_archival_params(String sql, String pvName, UserSpecifiedSamplingParams obj, String msg) throws IOException {
+		if(pvName == null || pvName.equals("")) return null;
 
 		try(Connection conn = theDataSource.getConnection()) {
 			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
-				stmt.setString(1, key);
+				stmt.setString(1, pvName);
 				try(ResultSet rs = stmt.executeQuery()) {
 					while(rs.next()) {
-						String jsonStr = rs.getString(1);
-						JSONObject jsonObj = (JSONObject) JSONValue.parse(jsonStr);
-						JSONDecoder<T> decoder = JSONDecoder.getDecoder(clazz);
-						decoder.decode(jsonObj, obj);
+						obj.setUserSpecifedsamplingMethod(rs.getString(1));
+						obj.setUserSpecifedSamplingPeriod= rs.getDouble(2);
+						obj.setControllingPV = rs.getString(3);
+						obj.setPolicyName = rs.getString(4);
+						obj.setUsePVAccess = rs.getBool(5);
 						return obj;
 					}
 				}
