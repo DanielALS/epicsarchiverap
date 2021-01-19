@@ -6,7 +6,7 @@ create table ArchivePVRequests (
     samplingMethod enum('SCAN', 'MONITOR') NOT NULL,
     samplingPeriod FLOAT NOT NULL,
     policyName VARCHAR(255),
-    `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `last_modified` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 
@@ -15,7 +15,7 @@ drop table if exists PVTypeInfo;
 create table PVTypeInfo (
     pvName VARCHAR(255) PRIMARY KEY,
     paused ENUM('true', 'false'),
-    creationTime DATETIME,
+    creationTime TIMESTAMP,
     lowerAlarmLimit DOUBLE,
     `precision` DOUBLE,
     lowerCtrlLimit DOUBLE,
@@ -23,7 +23,7 @@ create table PVTypeInfo (
     computedEventRate DOUBLE,
     usePVAccess ENUM('true', 'false'),
     computedStorageRate DOUBLE,
-    modificationTime DATETIME,
+    modificationTime TIMESTAMP,
     upperDisplayLimit DOUBLE,
     upperWarningLimit DOUBLE,
     DBRType VARCHAR(20),
