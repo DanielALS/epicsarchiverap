@@ -11,6 +11,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.LinkedList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
 import java.util.ArrayList;
@@ -92,7 +93,8 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 	@Override
 	public void putArchivePVRequest(String pvName, UserSpecifiedSamplingParams userParams) throws IOException {
-		putValueForKey("INSERT INTO ArchivePVRequests (pvName, userParams) VALUES (?, ?) ON DUPLICATE KEY UPDATE userParams = ?;", pvName, userParams, UserSpecifiedSamplingParams.class, "putArchivePVRequest");
+        String query = "INSERT INTO ArchivePVRequests (pvName, samplingMethod, samplingPeriod, controllingPV, policyName, usePVAcess) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?);";
+		putArchiveRequestParams(query, pvName, userParams, "putArchivePVRequest");
 	}
 
 	@Override
@@ -265,55 +267,56 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 	}
 
 
-	private <T> void updatePVTypeInfo(String sql, String pvName, T obj, String msg) throws IOException {
+	private void updatePVTypeInfo(String sql, String pvName, PVTypeInfo obj, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating: " + msg);
 		if(obj == null || obj.equals("")) throw new IOException("value cannot be null when updating:" + msg);
 
-        List<String> cols = Arrays.asList(keys.split("\\s*,\\s*"));
+        String[] cols = keys.split("\\s*,\\s*");
 
 		try(Connection conn = theDataSource.getConnection()) {
 			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
 				stmt.setString(1, pvName);
 				stmt.setString(2, cols[0]);
-				stmt.setTimeStamp(3, cols[1]);
-				stmt.setDouble(4, cols[2]);
-				stmt.setDouble(5, cols[3]);
-				stmt.setDouble(6, cols[4]);
-				stmt.setInt(7, cols[5]);
-				stmt.setDouble(8, cols[6]);
+				stmt.setTimestamp(3, convertString2Date(cols[1]));
+				stmt.setDouble(4, Double.parseDouble(cols[2]));
+				stmt.setDouble(5, Double.parseDouble(cols[3]));
+				stmt.setDouble(6, Double.parseDouble(cols[4]));
+				stmt.setInt(7, Integer.valueOf(cols[5]));
+				stmt.setDouble(8, Double.parseDouble(cols[6]));
 				stmt.setString(9, cols[7]);
-				stmt.setDouble(10, cols[8]);
-				stmt.setTimeStamp(11, cols[9]);
-				stmt.setDouble(12, cols[10]);
-				stmt.setDouble(13, cols[11]);
+				stmt.setDouble(10, Double.parseDouble(cols[8]));
+				stmt.setTimestamp(11, convertString2Date(cols[9]));
+				stmt.setDouble(12, Double.parseDouble(cols[10]));
+				stmt.setDouble(13, Double.parseDouble(cols[11]));
 				stmt.setString(14, cols[12]);
 				stmt.setString(15, cols[13]);
 				stmt.setString(16, cols[14]);
 				stmt.setString(17, cols[15]);
-				stmt.setDouble(18, cols[16]);
-				stmt.setDouble(19, cols[17]);
+				stmt.setDouble(18, Double.parseDouble(cols[16]));
+				stmt.setDouble(19, Double.parseDouble(cols[17]));
 				stmt.setString(20, cols[18]);
 				stmt.setString(21, cols[19]);
-				stmt.setDouble(22, cols[20]);
+				stmt.setDouble(22, Double.parseDouble(cols[20]));
 				stmt.setString(23, cols[21]);
 				stmt.setString(24, cols[22]);
-				stmt.setDouble(25, cols[23]);
-				stmt.setDouble(26, cols[24]);
-				stmt.setDouble(27, cols[25]);
-				stmt.setInt(28, cols[26]);
+				stmt.setDouble(25, Double.parseDouble(cols[23]));
+				stmt.setDouble(26, Double.parseDouble(cols[24]));
+				stmt.setDouble(27, Double.parseDouble(cols[25]));
+				stmt.setInt(28, Integer.valueOf(cols[26]));
 				stmt.setString(29, cols[27]);
 				stmt.setString(30, cols[28]);
-				stmt.setFloat(30, cols[28]);
-				stmt.setFloat(31, cols[29]);
-				stmt.setFloat(32, cols[30]);
+				stmt.setFloat(30, Float.parseFloat(cols[28]));
+				stmt.setFloat(31, Float.parseFloat(cols[29]));
+				stmt.setFloat(32, Float.parseFloat(cols[30]));
 				stmt.setString(33, cols[31]);
-				stmt.setTimeStamp(34, cols[33]);
+				stmt.setTimestamp(34, convertString2Date(cols[33]));
 
                 int rowsChanged = stmt.executeUpdate();
+
 				if(rowsChanged != 1) {
-					logger.warn(rowsChanged + " rows changed when updating key  " + key + " in " + msg);
+					logger.warn(rowsChanged + " rows changed when updating PV " + pvName + " in " + msg);
 				} else {
-					logger.debug("Successfully updated value for key " + key + " in " + msg);
+					logger.debug("Successfully updated value for PV " + pvName + " in " + msg);
 				}
 			}
 		} catch(Exception ex) {
@@ -368,11 +371,11 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 				stmt.setString(1, pvName);
 				try(ResultSet rs = stmt.executeQuery()) {
 					while(rs.next()) {
-						obj.setUserSpecifedsamplingMethod(rs.getString(1));
-						obj.setUserSpecifedSamplingPeriod= rs.getDouble(2);
-						obj.setControllingPV = rs.getString(3);
-						obj.setPolicyName = rs.getString(4);
-						obj.setUsePVAccess = rs.getBool(5);
+						obj.setUserSpecifedsamplingMethod(SamplingMethod.valueOf(rs.getString(1)));
+						obj.setUserSpecifedSamplingPeriod(rs.getFloat(2));
+						obj.setControllingPV(rs.getString(3));
+						obj.setPolicyName(rs.getString(4));
+						obj.setUsePVAccess(rs.getBoolean(5));
 						return obj;
 					}
 				}
@@ -382,5 +385,27 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		}
 
 		return null;
+	}
+     private void putArchiveRequestParams(String query, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
+		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating:" + msg);
+		try(Connection conn = theDataSource.getConnection()) {
+			try(PreparedStatement stmt = conn.prepareStatement(query)) {
+				stmt.setString(1, pvName);
+                SamplingMethod method = userParams.getUserSpecifedsamplingMethod();
+				stmt.setString(2, method.toString());
+				stmt.setDouble(3, userParams.getUserSpecifedSamplingPeriod());
+				stmt.setString(4, userParams.getControllingPV());
+				stmt.setString(5, userParams.getPolicyName());
+				stmt.setString(6, String.valueOf(userParams.isUsePVAccess()));
+				int rowsChanged = stmt.executeUpdate();
+				if(rowsChanged != 1) {
+					logger.warn(rowsChanged + " rows changed when updating key  " + pvName + " in " + msg);
+				} else {
+					logger.debug("Successfully updated value for key " + pvName + " in " + msg);
+				}
+			}
+		} catch(Exception ex) {
+			throw new IOException(ex);
+		}
 	}
 }
