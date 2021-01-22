@@ -5,4 +5,5 @@ docs/LICENSE
 docs/api/
 stage/
 .DS_Store
-
+new_builds
+tags
