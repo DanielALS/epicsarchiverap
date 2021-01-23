@@ -1,14 +1,14 @@
 drop table if exists ArchivePVRequests;
 
 create table ArchivePVRequests (
-    pvName varchar(255) PRIMARY KEY,
-    applianceIdentity VARCHAR(255) NOT NULL,
-    samplingMethod enum('SCAN', 'MONITOR') NOT NULL,
+    pvName VARCHAR(255) PRIMARY KEY,
+    samplingMethod ENUM('SCAN', 'MONITOR') NOT NULL,
     samplingPeriod FLOAT NOT NULL,
+    controllingPV VARCHAR(255),
     policyName VARCHAR(255),
-    `last_modified` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
-
+    usePVAccess ENUM("true", "false"),
+    `last_modified` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)ENGINE=InnoDB;
 
 drop table if exists PVTypeInfo;
 
@@ -48,5 +48,5 @@ create table PVTypeInfo (
     adel float,
     scan float,
     archive_fields VARCHAR(255),
-    `last_modified` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    `last_modified` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )ENGINE=InnoDB DEFAULT CHARSET=latin1;
