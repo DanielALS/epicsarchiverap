@@ -15,7 +15,7 @@ drop table if exists PVTypeInfo;
 create table PVTypeInfo (
     pvName VARCHAR(255) PRIMARY KEY,
     paused ENUM('true', 'false'),
-    creationTime TIMESTAMP,
+    creationTime TIMESTAMP DEFAULT 0,
     lowerAlarmLimit DOUBLE,
     `precision` DOUBLE,
     lowerCtrlLimit DOUBLE,
@@ -23,7 +23,7 @@ create table PVTypeInfo (
     computedEventRate DOUBLE,
     usePVAccess ENUM('true', 'false'),
     computedStorageRate DOUBLE,
-    modificationTime TIMESTAMP,
+    modificationTime TIMESTAMP DEFAULT 0,
     upperDisplayLimit DOUBLE,
     upperWarningLimit DOUBLE,
     DBRType VARCHAR(20),
