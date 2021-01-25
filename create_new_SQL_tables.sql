@@ -2,11 +2,15 @@ drop table if exists ArchivePVRequests;
 
 create table ArchivePVRequests (
     pvName VARCHAR(255) PRIMARY KEY,
-    samplingMethod ENUM('SCAN', 'MONITOR') NOT NULL,
-    samplingPeriod FLOAT NOT NULL,
+    userSpecifiedSamplingMethod ENUM('SCAN', 'MONITOR') NOT NULL,
+    skipAliasCheck ENUM('true', 'false'),
+    skipCapacityPlanning ENUM('true', 'false'),
+    userSpecifiedSamplingPeriod FLOAT NOT NULL,
     controllingPV VARCHAR(255),
     policyName VARCHAR(255),
     usePVAccess ENUM("true", "false"),
+    alias VARCHAR(255),
+    archiveFields VARCHAR(255),
     `last_modified` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )ENGINE=InnoDB;
 
