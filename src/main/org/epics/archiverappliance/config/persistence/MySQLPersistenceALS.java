@@ -83,17 +83,15 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		return getKeys("SELECT pvName AS pvName FROM ArchivePVRequests ORDER BY pvName;", "getArchivePVRequestsKeys");
 	}
 
-    //userSpecifedsamplingMethod, userSpecifedSamplingPeriod, controllingPV, policyName, skipCapacityPlanning, usePVAccess
-    // question about `skipCapacityPlanning`
-	@Override
+            @Override
 	public UserSpecifiedSamplingParams getArchivePVRequest(String pvName) throws IOException {
-        String query = "SELECT samplingMethod, samplingPeriod, controllingPV, policyName, usePVAcess FROM ArchivePVRequests WHERE pvName = ?;";
+        String query = "SELECT samplingMethod, skipAliasCheck, skipCapacityPlanning, samplingPeriod, controllingPV, policyName, usePVAcess, alias, archiveFields FROM ArchivePVRequests WHERE pvName = ?;";
 		return get_archival_params(query, pvName, new UserSpecifiedSamplingParams(), "getArchivePVRequest");
 	}
 
 	@Override
 	public void putArchivePVRequest(String pvName, UserSpecifiedSamplingParams userParams) throws IOException {
-        String query = "INSERT INTO ArchivePVRequests (pvName, samplingMethod, samplingPeriod, controllingPV, policyName, usePVAcess) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?);";
+        String query = "INSERT INTO ArchivePVRequests (pvName, samplingMethod, samplingPeriod, controllingPV, policyName, usePVAcess, last_modifed) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?, ?, ?);";
 		putArchiveRequestParams(query, pvName, userParams, "putArchivePVRequest");
 	}
 
@@ -362,7 +360,16 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		}
 	}
 
-    //userSpecifedsamplingMethod, userSpecifedSamplingPeriod, controllingPV, policyName, usePVAccess
+        /* 1 userSpecifiedSamplingMethod,
+         * 2 skipAliasCheck ENUM('true', 'false'),
+         * 3 skipCapacityPlanning ENUM('true', 'false'),
+         * 4 userSpecifiedSamplingPeriod,
+         * 5 controllingPV,
+         * 6 policyName,
+         * 7 usePVAccess ENUM("true", "false"),
+         * 8 alias,
+         * 9 archiveFields,
+         * 10 `last_modified` TIMESTAMP  # not sure if we need to select for this ?*/
 	private UserSpecifiedSamplingParams get_archival_params(String sql, String pvName, UserSpecifiedSamplingParams obj, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) return null;
 
@@ -372,10 +379,19 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 				try(ResultSet rs = stmt.executeQuery()) {
 					while(rs.next()) {
 						obj.setUserSpecifedsamplingMethod(SamplingMethod.valueOf(rs.getString(1)));
-						obj.setUserSpecifedSamplingPeriod(rs.getFloat(2));
-						obj.setControllingPV(rs.getString(3));
-						obj.setPolicyName(rs.getString(4));
-						obj.setUsePVAccess(rs.getBoolean(5));
+						obj.setSkipAliasCheck(rs.getBoolean(2));
+						obj.setSkipCapacityPlanning(rs.getBoolean(3));
+						obj.setUserSpecifedSamplingPeriod(rs.getFloat(4));
+						obj.setControllingPV(rs.getString(5));
+						obj.setPolicyName(rs.getString(6));
+						obj.setUsePVAccess(rs.getBoolean(7));
+                        String alias_string = rs.getString(8);
+                        String[] aliases = alias_string.split(";");
+						obj.setAliases(aliases);
+                        // Strings delimited by ;
+                        String fieldstring = rs.getString(9);
+                        String[] fields = fieldstring.split("\\s*,\\s*");
+						obj.setArchiveFields(fields);
 						return obj;
 					}
 				}
@@ -386,6 +402,19 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 		return null;
 	}
+
+        /* 1 pvName
+         * 2 userSpecifiedSamplingMethod,
+         * 3 skipAliasCheck ENUM('true', 'false'),
+         * 4 skipCapacityPlanning ENUM('true', 'false'),
+         * 5 userSpecifiedSamplingPeriod,
+         * 6 controllingPV,
+         * 7 policyName,
+         * 8 usePVAccess ENUM("true", "false"),
+         * 9 alias,
+         * 10 archiveFields,
+         * 11 `last_modified` TIMESTAMP  # not sure if we need to select for this ?*/
+
      private void putArchiveRequestParams(String query, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating:" + msg);
 		try(Connection conn = theDataSource.getConnection()) {
@@ -393,10 +422,17 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 				stmt.setString(1, pvName);
                 SamplingMethod method = userParams.getUserSpecifedsamplingMethod();
 				stmt.setString(2, method.toString());
-				stmt.setDouble(3, userParams.getUserSpecifedSamplingPeriod());
-				stmt.setString(4, userParams.getControllingPV());
-				stmt.setString(5, userParams.getPolicyName());
-				stmt.setString(6, String.valueOf(userParams.isUsePVAccess()));
+				stmt.setString(3, String.valueOf(userParams.isSkipAliasCheck()));
+				stmt.setString(4, String.valueOf(userParams.isSkipCapacityPlanning()));
+				stmt.setDouble(5, userParams.getUserSpecifedSamplingPeriod());
+				stmt.setString(6, userParams.getControllingPV());
+				stmt.setString(7, userParams.getPolicyName());
+				stmt.setString(8, String.valueOf(userParams.isUsePVAccess()));
+				stmt.setString(9, String.valueOf(userParams.isUsePVAccess()));
+                // String using ; delimiter to store list.
+                String[] fields = userParams.getArchiveFields();
+                String fields_string = String.join(";", fields);
+				stmt.setString(10, fields_string);
 				int rowsChanged = stmt.executeUpdate();
 				if(rowsChanged != 1) {
 					logger.warn(rowsChanged + " rows changed when updating key  " + pvName + " in " + msg);
