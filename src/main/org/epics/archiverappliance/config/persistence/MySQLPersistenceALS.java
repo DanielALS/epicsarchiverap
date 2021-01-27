@@ -91,8 +91,9 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 	@Override
 	public void putArchivePVRequest(String pvName, UserSpecifiedSamplingParams userParams) throws IOException {
-        String query = "INSERT INTO ArchivePVRequests (pvName, samplingMethod, samplingPeriod, controllingPV, policyName, usePVAcess, last_modifed) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?, ?, ?);";
-		putArchiveRequestParams(query, pvName, userParams, "putArchivePVRequest");
+        String query = "INSERT INTO ArchivePVRequests (pvName, samplingMethod, skipAliasCheck, skipCapacityPlanning, samplingPeriod, controllingPV, policyName, usePVAcess, alias, archiveFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
+        String query_cont = "ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+		putArchiveRequestParams(query, query_cont, pvName, userParams, "putArchivePVRequest");
 	}
 
 	@Override
@@ -368,8 +369,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
          * 6 policyName,
          * 7 usePVAccess ENUM("true", "false"),
          * 8 alias,
-         * 9 archiveFields,
-         * 10 `last_modified` TIMESTAMP  # not sure if we need to select for this ?*/
+         * 9 archiveFields, */
 	private UserSpecifiedSamplingParams get_archival_params(String sql, String pvName, UserSpecifiedSamplingParams obj, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) return null;
 
@@ -413,35 +413,50 @@ public class MySQLPersistenceALS implements ConfigPersistence {
          * 8 usePVAccess ENUM("true", "false"),
          * 9 alias,
          * 10 archiveFields,
-         * 11 `last_modified` TIMESTAMP  # not sure if we need to select for this ?*/
+         */
 
-     private void putArchiveRequestParams(String query, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
-		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating:" + msg);
+     private void putArchiveRequestParams(String query, String query_cont, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
+		if(pvName == null || pvName.equals("")) throw new SQLException("pvName cannot be null when updating:" + msg);
 		try(Connection conn = theDataSource.getConnection()) {
-			try(PreparedStatement stmt = conn.prepareStatement(query)) {
-				stmt.setString(1, pvName);
-                SamplingMethod method = userParams.getUserSpecifedsamplingMethod();
-				stmt.setString(2, method.toString());
-				stmt.setString(3, String.valueOf(userParams.isSkipAliasCheck()));
-				stmt.setString(4, String.valueOf(userParams.isSkipCapacityPlanning()));
-				stmt.setDouble(5, userParams.getUserSpecifedSamplingPeriod());
-				stmt.setString(6, userParams.getControllingPV());
-				stmt.setString(7, userParams.getPolicyName());
-				stmt.setString(8, String.valueOf(userParams.isUsePVAccess()));
-				stmt.setString(9, String.valueOf(userParams.isUsePVAccess()));
-                // String using ; delimiter to store list.
-                String[] fields = userParams.getArchiveFields();
-                String fields_string = String.join(";", fields);
-				stmt.setString(10, fields_string);
-				int rowsChanged = stmt.executeUpdate();
-				if(rowsChanged != 1) {
-					logger.warn(rowsChanged + " rows changed when updating key  " + pvName + " in " + msg);
-				} else {
-					logger.debug("Successfully updated value for key " + pvName + " in " + msg);
-				}
-			}
+			try(PreparedStatement stmt = conn.prepareStatement(query);
+                PreparedStatement stmt_cont = conn.prepareStatement(query_cont)
+                ) {
+                    stmt.setString(1, pvName);
+                    SamplingMethod method = userParams.getUserSpecifedsamplingMethod();
+                    stmt.setString(2, method.toString());
+                    stmt.setString(3, String.valueOf(userParams.isSkipAliasCheck()));
+                    stmt.setString(4, String.valueOf(userParams.isSkipCapacityPlanning()));
+                    stmt.setDouble(5, userParams.getUserSpecifedSamplingPeriod());
+                    stmt.setString(6, userParams.getControllingPV());
+                    stmt.setString(7, userParams.getPolicyName());
+                    stmt.setString(8, String.valueOf(userParams.isUsePVAccess()));
+                    String[] aliases = userParams.getAliases();
+                    String aliases_string = String.join(";", aliases);
+                    stmt.setString(9, aliases_string);
+                    String[] fields = userParams.getArchiveFields();
+                    String fields_string = String.join(";", fields);
+                    stmt.setString(10, fields_string);
+
+                    // `update` part of the query.
+                    stmt_cont.setString(1, method.toString());
+                    stmt_cont.setString(2, String.valueOf(userParams.isSkipAliasCheck()));
+                    stmt_cont.setString(3, String.valueOf(userParams.isSkipCapacityPlanning()));
+                    stmt_cont.setDouble(4, userParams.getUserSpecifedSamplingPeriod());
+                    stmt_cont.setString(5, userParams.getControllingPV());
+                    stmt_cont.setString(6, userParams.getPolicyName());
+                    stmt_cont.setString(7, String.valueOf(userParams.isUsePVAccess()));
+                    stmt_cont.setString(8, aliases_string);
+                    stmt_cont.setString(9, fields_string);
+
+                    int rowsChanged = stmt.executeUpdate();
+                    if(rowsChanged != 1) {
+                        logger.warn(rowsChanged + " rows changed when updating key  " + pvName + " in " + msg);
+                    } else {
+                        logger.debug("Successfully updated value for key " + pvName + " in " + msg);
+                    }
+                }
 		} catch(Exception ex) {
-			throw new IOException(ex);
+			throw new SQLException(ex);
 		}
 	}
 }
