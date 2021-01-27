@@ -416,7 +416,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
          */
 
      private void putArchiveRequestParams(String query, String query_cont, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
-		if(pvName == null || pvName.equals("")) throw new SQLException("pvName cannot be null when updating:" + msg);
+		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating:" + msg);
 		try(Connection conn = theDataSource.getConnection()) {
 			try(PreparedStatement stmt = conn.prepareStatement(query);
                 PreparedStatement stmt_cont = conn.prepareStatement(query_cont)
@@ -456,7 +456,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
                     }
                 }
 		} catch(Exception ex) {
-			throw new SQLException(ex);
+			throw new IOException(ex);
 		}
 	}
 }
