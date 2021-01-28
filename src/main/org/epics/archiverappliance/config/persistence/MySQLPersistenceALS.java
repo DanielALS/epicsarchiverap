@@ -91,8 +91,10 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 	@Override
 	public void putArchivePVRequest(String pvName, UserSpecifiedSamplingParams userParams) throws IOException {
-        String query = "INSERT INTO ArchivePVRequests (pvName, userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning, userSpecifiedSamplingPeriod, controllingPV, policyName, usePVAccess, alias, archiveFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
-        query += "ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+        String query = "INSERT INTO ArchivePVRequests (pvName, userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning,";
+        query += "userSpecifiedSamplingPeriod, controllingPV, policyName, usePVAccess, alias, archiveFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
+        query += "ON DUPLICATE KEY UPDATE userSpecifiedSamplingMethod  = ?, skipAliasCheck = ?, skipCapacityPlanning = ?, userSpecifiedSamplingPeriod = ?,";
+        query += "controllingPV = ?, policyName = ?, usePVAccess = ?, alias = ?, archiveFields = ?;";
 		putArchiveRequestParams(query, pvName, userParams, "putArchivePVRequest");
 	}
 
