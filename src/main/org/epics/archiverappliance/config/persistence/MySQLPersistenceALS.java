@@ -69,7 +69,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 	@Override
 	public void putTypeInfo(String pvName, PVTypeInfo typeInfo) throws IOException {
         String query = "INSERT INTO PVTypeInfo (pvName," + keys + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        query += " ON DUPLICATE KEY UPDATE (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+        query  += " ON DUPLICATE KEY UPDATE (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
 		updatePVTypeInfo(query, pvName, typeInfo, "putTypeInfo");
 	}
 
@@ -85,15 +85,15 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
             @Override
 	public UserSpecifiedSamplingParams getArchivePVRequest(String pvName) throws IOException {
-        String query = "SELECT samplingMethod, skipAliasCheck, skipCapacityPlanning, samplingPeriod, controllingPV, policyName, usePVAcess, alias, archiveFields FROM ArchivePVRequests WHERE pvName = ?;";
+        String query = "SELECT userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning, userSpecifiedSamplingPeriod, controllingPV, policyName, usePVAcess, alias, archiveFields FROM ArchivePVRequests WHERE pvName = ?;";
 		return get_archival_params(query, pvName, new UserSpecifiedSamplingParams(), "getArchivePVRequest");
 	}
 
 	@Override
 	public void putArchivePVRequest(String pvName, UserSpecifiedSamplingParams userParams) throws IOException {
-        String query = "INSERT INTO ArchivePVRequests (pvName, samplingMethod, skipAliasCheck, skipCapacityPlanning, samplingPeriod, controllingPV, policyName, usePVAcess, alias, archiveFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
-        String query_cont = "ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?, ?, ?, ?, ?);";
-		putArchiveRequestParams(query, query_cont, pvName, userParams, "putArchivePVRequest");
+        String query = "INSERT INTO ArchivePVRequests (pvName, userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning, userSpecifiedSamplingPeriod, controllingPV, policyName, usePVAccess, alias, archiveFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
+        query += "ON DUPLICATE KEY UPDATE (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+		putArchiveRequestParams(query, pvName, userParams, "putArchivePVRequest");
 	}
 
 	@Override
@@ -161,7 +161,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 
     private Timestamp convertString2Date(String date_string) throws ParseException {
-       SimpleDateFormat dateFormat = new SimpleDateFormat("YYYY-dd-mmTHH:MM:SS.sssZ");
+       SimpleDateFormat dateFormat = new SimpleDateFormat("YYYY-dd-mm'T'HH:MM:SS.sssZ");
        Date parsedDate = dateFormat.parse(date_string);
        Timestamp timestamp = new Timestamp(parsedDate.getTime());
        return timestamp;
@@ -274,50 +274,86 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
 		try(Connection conn = theDataSource.getConnection()) {
 			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
-				stmt.setString(1, pvName);
-				stmt.setString(2, cols[0]);
-				stmt.setTimestamp(3, convertString2Date(cols[1]));
-				stmt.setDouble(4, Double.parseDouble(cols[2]));
-				stmt.setDouble(5, Double.parseDouble(cols[3]));
-				stmt.setDouble(6, Double.parseDouble(cols[4]));
-				stmt.setInt(7, Integer.valueOf(cols[5]));
-				stmt.setDouble(8, Double.parseDouble(cols[6]));
-				stmt.setString(9, cols[7]);
-				stmt.setDouble(10, Double.parseDouble(cols[8]));
-				stmt.setTimestamp(11, convertString2Date(cols[9]));
-				stmt.setDouble(12, Double.parseDouble(cols[10]));
-				stmt.setDouble(13, Double.parseDouble(cols[11]));
-				stmt.setString(14, cols[12]);
-				stmt.setString(15, cols[13]);
-				stmt.setString(16, cols[14]);
-				stmt.setString(17, cols[15]);
-				stmt.setDouble(18, Double.parseDouble(cols[16]));
-				stmt.setDouble(19, Double.parseDouble(cols[17]));
-				stmt.setString(20, cols[18]);
-				stmt.setString(21, cols[19]);
-				stmt.setDouble(22, Double.parseDouble(cols[20]));
-				stmt.setString(23, cols[21]);
-				stmt.setString(24, cols[22]);
-				stmt.setDouble(25, Double.parseDouble(cols[23]));
-				stmt.setDouble(26, Double.parseDouble(cols[24]));
-				stmt.setDouble(27, Double.parseDouble(cols[25]));
-				stmt.setInt(28, Integer.valueOf(cols[26]));
-				stmt.setString(29, cols[27]);
-				stmt.setString(30, cols[28]);
-				stmt.setFloat(30, Float.parseFloat(cols[28]));
-				stmt.setFloat(31, Float.parseFloat(cols[29]));
-				stmt.setFloat(32, Float.parseFloat(cols[30]));
-				stmt.setString(33, cols[31]);
-				stmt.setTimestamp(34, convertString2Date(cols[33]));
+                    stmt.setString(1, pvName);
+                    stmt.setString(2, cols[0]);
+                    stmt.setTimestamp(3, convertString2Date(cols[1]));
+                    stmt.setDouble(4, Double.parseDouble(cols[2]));
+                    stmt.setDouble(5, Double.parseDouble(cols[3]));
+                    stmt.setDouble(6, Double.parseDouble(cols[4]));
+                    stmt.setInt(7, Integer.valueOf(cols[5]));
+                    stmt.setDouble(8, Double.parseDouble(cols[6]));
+                    stmt.setString(9, cols[7]);
+                    stmt.setDouble(10, Double.parseDouble(cols[8]));
+                    stmt.setTimestamp(11, convertString2Date(cols[9]));
+                    stmt.setDouble(12, Double.parseDouble(cols[10]));
+                    stmt.setDouble(13, Double.parseDouble(cols[11]));
+                    stmt.setString(14, cols[12]);
+                    stmt.setString(15, cols[13]);
+                    stmt.setString(16, cols[14]);
+                    stmt.setString(17, cols[15]);
+                    stmt.setDouble(18, Double.parseDouble(cols[16]));
+                    stmt.setDouble(19, Double.parseDouble(cols[17]));
+                    stmt.setString(20, cols[18]);
+                    stmt.setString(21, cols[19]);
+                    stmt.setDouble(22, Double.parseDouble(cols[20]));
+                    stmt.setString(23, cols[21]);
+                    stmt.setString(24, cols[22]);
+                    stmt.setDouble(25, Double.parseDouble(cols[23]));
+                    stmt.setDouble(26, Double.parseDouble(cols[24]));
+                    stmt.setDouble(27, Double.parseDouble(cols[25]));
+                    stmt.setInt(28, Integer.valueOf(cols[26]));
+                    stmt.setString(29, cols[27]);
+                    stmt.setString(30, cols[28]);
+                    stmt.setFloat(30, Float.parseFloat(cols[28]));
+                    stmt.setFloat(31, Float.parseFloat(cols[29]));
+                    stmt.setFloat(32, Float.parseFloat(cols[30]));
+                    stmt.setString(33, cols[31]);
+                    stmt.setTimestamp(34, convertString2Date(cols[33]));
 
-                int rowsChanged = stmt.executeUpdate();
+                    // `update` part of the query
+                    stmt.setString(35, cols[0]);
+                    stmt.setTimestamp(36, convertString2Date(cols[1]));
+                    stmt.setDouble(37, Double.parseDouble(cols[2]));
+                    stmt.setDouble(38, Double.parseDouble(cols[3]));
+                    stmt.setDouble(39, Double.parseDouble(cols[4]));
+                    stmt.setInt(40, Integer.valueOf(cols[5]));
+                    stmt.setDouble(41, Double.parseDouble(cols[6]));
+                    stmt.setString(42, cols[7]);
+                    stmt.setDouble(43, Double.parseDouble(cols[8]));
+                    stmt.setTimestamp(44, convertString2Date(cols[9]));
+                    stmt.setDouble(45, Double.parseDouble(cols[10]));
+                    stmt.setDouble(46, Double.parseDouble(cols[11]));
+                    stmt.setString(47, cols[12]);
+                    stmt.setString(48, cols[13]);
+                    stmt.setString(49, cols[14]);
+                    stmt.setString(50, cols[15]);
+                    stmt.setDouble(51, Double.parseDouble(cols[16]));
+                    stmt.setDouble(52, Double.parseDouble(cols[17]));
+                    stmt.setString(53, cols[18]);
+                    stmt.setString(54, cols[19]);
+                    stmt.setDouble(55, Double.parseDouble(cols[20]));
+                    stmt.setString(56, cols[21]);
+                    stmt.setString(57, cols[22]);
+                    stmt.setDouble(58, Double.parseDouble(cols[23]));
+                    stmt.setDouble(59, Double.parseDouble(cols[24]));
+                    stmt.setDouble(60, Double.parseDouble(cols[25]));
+                    stmt.setInt(61, Integer.valueOf(cols[26]));
+                    stmt.setString(62, cols[27]);
+                    stmt.setString(63, cols[28]);
+                    stmt.setFloat(63, Float.parseFloat(cols[28]));
+                    stmt.setFloat(64, Float.parseFloat(cols[29]));
+                    stmt.setFloat(65, Float.parseFloat(cols[30]));
+                    stmt.setString(66, cols[31]);
+                    stmt.setTimestamp(67, convertString2Date(cols[33]));
 
-				if(rowsChanged != 1) {
-					logger.warn(rowsChanged + " rows changed when updating PV " + pvName + " in " + msg);
-				} else {
-					logger.debug("Successfully updated value for PV " + pvName + " in " + msg);
-				}
-			}
+                    int rowsChanged = stmt.executeUpdate();
+
+                    if(rowsChanged != 1) {
+                        logger.warn(rowsChanged + " rows changed when updating PV " + pvName + " in " + msg);
+                    } else {
+                        logger.debug("Successfully updated value for PV " + pvName + " in " + msg);
+                    }
+                }
 		} catch(Exception ex) {
 			throw new IOException(ex);
 		}
@@ -361,15 +397,6 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		}
 	}
 
-        /* 1 userSpecifiedSamplingMethod,
-         * 2 skipAliasCheck ENUM('true', 'false'),
-         * 3 skipCapacityPlanning ENUM('true', 'false'),
-         * 4 userSpecifiedSamplingPeriod,
-         * 5 controllingPV,
-         * 6 policyName,
-         * 7 usePVAccess ENUM("true", "false"),
-         * 8 alias,
-         * 9 archiveFields, */
 	private UserSpecifiedSamplingParams get_archival_params(String sql, String pvName, UserSpecifiedSamplingParams obj, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) return null;
 
@@ -403,24 +430,11 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		return null;
 	}
 
-        /* 1 pvName
-         * 2 userSpecifiedSamplingMethod,
-         * 3 skipAliasCheck ENUM('true', 'false'),
-         * 4 skipCapacityPlanning ENUM('true', 'false'),
-         * 5 userSpecifiedSamplingPeriod,
-         * 6 controllingPV,
-         * 7 policyName,
-         * 8 usePVAccess ENUM("true", "false"),
-         * 9 alias,
-         * 10 archiveFields,
-         */
-
-     private void putArchiveRequestParams(String query, String query_cont, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
+    //'('MONITOR', 'false', 'true', 0.10000000149011612, null, 'Default', 'false', '', '
+     private void putArchiveRequestParams(String query, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating:" + msg);
 		try(Connection conn = theDataSource.getConnection()) {
-			try(PreparedStatement stmt = conn.prepareStatement(query);
-                PreparedStatement stmt_cont = conn.prepareStatement(query_cont)
-                ) {
+			try(PreparedStatement stmt = conn.prepareStatement(query)) {
                     stmt.setString(1, pvName);
                     SamplingMethod method = userParams.getUserSpecifedsamplingMethod();
                     stmt.setString(2, method.toString());
@@ -431,22 +445,25 @@ public class MySQLPersistenceALS implements ConfigPersistence {
                     stmt.setString(7, userParams.getPolicyName());
                     stmt.setString(8, String.valueOf(userParams.isUsePVAccess()));
                     String[] aliases = userParams.getAliases();
-                    String aliases_string = String.join(";", aliases);
+                    String aliases_string = null;
+                    if (aliases.length > 1){
+                        aliases_string = String.join(";", aliases);
+                    }
                     stmt.setString(9, aliases_string);
                     String[] fields = userParams.getArchiveFields();
                     String fields_string = String.join(";", fields);
                     stmt.setString(10, fields_string);
 
                     // `update` part of the query.
-                    stmt_cont.setString(1, method.toString());
-                    stmt_cont.setString(2, String.valueOf(userParams.isSkipAliasCheck()));
-                    stmt_cont.setString(3, String.valueOf(userParams.isSkipCapacityPlanning()));
-                    stmt_cont.setDouble(4, userParams.getUserSpecifedSamplingPeriod());
-                    stmt_cont.setString(5, userParams.getControllingPV());
-                    stmt_cont.setString(6, userParams.getPolicyName());
-                    stmt_cont.setString(7, String.valueOf(userParams.isUsePVAccess()));
-                    stmt_cont.setString(8, aliases_string);
-                    stmt_cont.setString(9, fields_string);
+                    stmt.setString(11, method.toString());
+                    stmt.setString(12, String.valueOf(userParams.isSkipAliasCheck()));
+                    stmt.setString(13, String.valueOf(userParams.isSkipCapacityPlanning()));
+                    stmt.setDouble(14, userParams.getUserSpecifedSamplingPeriod());
+                    stmt.setString(15, userParams.getControllingPV());
+                    stmt.setString(16, userParams.getPolicyName());
+                    stmt.setString(17, String.valueOf(userParams.isUsePVAccess()));
+                    stmt.setString(18, aliases_string);
+                    stmt.setString(19, fields_string);
 
                     int rowsChanged = stmt.executeUpdate();
                     if(rowsChanged != 1) {
@@ -457,6 +474,6 @@ public class MySQLPersistenceALS implements ConfigPersistence {
                 }
 		} catch(Exception ex) {
 			throw new IOException(ex);
-		}
-	}
+        }
+    }
 }
