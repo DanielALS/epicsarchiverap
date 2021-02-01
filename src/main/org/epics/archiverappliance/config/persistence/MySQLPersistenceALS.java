@@ -14,6 +14,7 @@ import java.util.LinkedList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.ArrayList;
 import org.epics.archiverappliance.mgmt.policy.PolicyConfig.SamplingMethod;
 
@@ -46,7 +47,9 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 			configlogger.info("Looking up datasource called jdbc/archappl in the java:/comp/env namespace using JDNI");
 			Context initContext = new InitialContext();
 			Context envContext  = (Context) initContext.lookup("java:/comp/env");
-			theDataSource = (DataSource)envContext.lookup("jdbc/archappl");
+			//theDataSource = (DataSource)envContext.lookup("jdbc/archappl");
+            String db_string = "jdbc/" +  System.getenv().get("MYSQL_DB_NAME");
+			theDataSource = (DataSource)envContext.lookup(db_string);
 			configlogger.info("Found datasource called jdbc/archappl in the java:/comp/env namespace using JDNI");
 		} catch(Exception ex) {
 			throw new ConfigException("Exception initializing MySQLPersistence ", ex);
@@ -69,7 +72,11 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 	@Override
 	public void putTypeInfo(String pvName, PVTypeInfo typeInfo) throws IOException {
         String query = "INSERT INTO PVTypeInfo (pvName," + keys + ") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        query  += " ON DUPLICATE KEY UPDATE (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);";
+        query += " ON DUPLICATE KEY UPDATE paused = ?, creationTime = ?, lowerAlarmLimit = ?, precision = ?, lowerCtrLimit = ?, computedBytesPerEvent = ?,";
+        query += "computedEventRate = ?, usePVAccess = ?, computedStorageRate = ?, modificationTime = ?, upperDisplayLimit = ?, upperWarningLimit = ?,";
+        query += "DBRType = ?, sts = ?, mts = ?, lts = ?, upperAlarmLimit = ?, userSpecifiedEeventRate = ?, policyName = ?, useDBEProperties = ?,";
+        query += "hasReducedDataSet = ?, lowerWarningLimit  = ?, applianceIdentity = ?, scalar = ?, upperCtrLimit = ?, lowerDisplayLimit = ?,";
+        query += "samplingPeriod = ?, elementCount = ?, samplingMethod = ?, rtype = ?, mdel = ?, adel = ?, scan = ?, archive_fields = ?;";
 		updatePVTypeInfo(query, pvName, typeInfo, "putTypeInfo");
 	}
 
