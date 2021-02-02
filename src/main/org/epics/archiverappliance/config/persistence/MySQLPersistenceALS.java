@@ -94,11 +94,12 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		return getKeys("SELECT pvName AS pvName FROM ArchivePVRequests ORDER BY pvName;", "getArchivePVRequestsKeys");
 	}
 
-            @Override
+    @Override
 	public UserSpecifiedSamplingParams getArchivePVRequest(String pvName) throws IOException {
         String query = "SELECT userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning, userSpecifiedSamplingPeriod, controllingPV,";
         query += " policyName, usePVAccess, alias, archiveFields FROM ArchivePVRequests WHERE pvName = ?;";
-		return get_archival_params(query, pvName, new UserSpecifiedSamplingParams(), "getArchivePVRequest");
+        logger.debug("archive params requested for: " + pvName);
+        return get_archival_params(query, pvName, new UserSpecifiedSamplingParams(), "getArchivePVRequest");
 	}
 
 	@Override
@@ -414,47 +415,73 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 	private UserSpecifiedSamplingParams get_archival_params(String sql, String pvName, UserSpecifiedSamplingParams obj, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) return null;
 
-		try(Connection conn = theDataSource.getConnection()) {
-			try(PreparedStatement stmt = conn.prepareStatement(sql)) {
-				stmt.setString(1, pvName);
-				try(ResultSet rs = stmt.executeQuery()) {
-					while(rs.next()) {
-						obj.setUserSpecifedsamplingMethod(SamplingMethod.valueOf(rs.getString(1)));
-						obj.setSkipAliasCheck(rs.getBoolean(2));
-						obj.setSkipCapacityPlanning(rs.getBoolean(3));
-						obj.setUserSpecifedSamplingPeriod(rs.getFloat(4));
-						obj.setControllingPV(rs.getString(5));
-						obj.setPolicyName(rs.getString(6));
-						obj.setUsePVAccess(rs.getBoolean(7));
+        Connection conn;
+		try {
+            conn = theDataSource.getConnection();
+        }
+        catch (Exception ex) {
+            // TODO: add more details here
+            logger.error("Connection to the database has failed.");
+            throw new IOException(ex);
+        }
 
-                        String alias_string = rs.getString(8);
-                        if (alias_string.length() > 0) {
-                            String[] aliases = alias_string.split(";");
-                            obj.setAliases(aliases);
-                        }
-                        else {
-                            String[] aliases = null;
-                            obj.setAliases(aliases);
-                        }
+        PreparedStatement stmt;
+        try {
+            stmt = conn.prepareStatement(sql);
+            stmt.setString(1, pvName);
+        }
+        catch (Exception ex) {
+            logger.error("Failed to create prepared statement for sql query.");
+            throw new IOException(ex);
+        }
 
-                        String fieldstring = rs.getString(9);
-                        if (fieldstring.length() > 0 ){
-                            String[] fields = fieldstring.split("\\s*,\\s*");
-                            obj.setArchiveFields(fields);
-                        }
-                        else {
-                            String[] fields = null;
-                            obj.setArchiveFields(fields);
-                        }
+        ResultSet rs;
+        try {
+            rs = stmt.executeQuery();
+        }
+        catch (SQLException ex) {
+            logger.error("Failed to execute sql query.");
+            throw new IOException(ex);
+        }
+        try {
+            while(rs.next()) {
+                obj.setUserSpecifedsamplingMethod(SamplingMethod.valueOf(rs.getString(1)));
+                obj.setSkipAliasCheck(rs.getBoolean(2));
+                obj.setSkipCapacityPlanning(rs.getBoolean(3));
+                obj.setUserSpecifedSamplingPeriod(rs.getFloat(4));
+                obj.setControllingPV(rs.getString(5));
+                obj.setPolicyName(rs.getString(6));
+                obj.setUsePVAccess(rs.getBoolean(7));
 
-						return obj;
-					}
-				}
-			}
-		} catch(Exception ex) {
-			throw new IOException(ex);
-		}
+                String alias_string = rs.getString(8);
+                if (alias_string.length() > 0) {
+                    String[] aliases = alias_string.split(";");
+                    obj.setAliases(aliases);
+                }
+                else {
+                    String[] aliases = null;
+                    obj.setAliases(aliases);
+                }
 
+                String fieldstring = rs.getString(9);
+                if (fieldstring.length() > 0 ){
+                    String[] fields = fieldstring.split("\\s*,\\s*");
+                    obj.setArchiveFields(fields);
+                }
+                else {
+                    String[] fields = null;
+                    obj.setArchiveFields(fields);
+                }
+
+                return obj;
+            }
+        }
+        catch (SQLException ex) {
+            logger.error("Error while iterating over the SQL results.");
+            throw new IOException(ex);
+        }
+
+        logger.error("Archive Request for PV:" + pvName + "returns null.");
 		return null;
 	}
 
