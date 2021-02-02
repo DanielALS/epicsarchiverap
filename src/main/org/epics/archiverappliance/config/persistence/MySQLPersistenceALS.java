@@ -454,7 +454,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
                 obj.setUsePVAccess(rs.getBoolean(7));
 
                 String alias_string = rs.getString(8);
-                if (alias_string.length() > 0) {
+                if (alias_string.equals("")) {
                     String[] aliases = alias_string.split(";");
                     obj.setAliases(aliases);
                 }
@@ -464,7 +464,7 @@ public class MySQLPersistenceALS implements ConfigPersistence {
                 }
 
                 String fieldstring = rs.getString(9);
-                if (fieldstring.length() > 0 ){
+                if (fieldstring.equals("")){
                     String[] fields = fieldstring.split("\\s*,\\s*");
                     obj.setArchiveFields(fields);
                 }
@@ -485,7 +485,21 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 		return null;
 	}
 
-    //'('MONITOR', 'false', 'true', 0.10000000149011612, null, 'Default', 'false', '', '
+    /*
+        "INSERT INTO ArchivePVRequests (
+        pvName,
+        userSpecifiedSamplingMethod,
+        skipAliasCheck,
+        skipCapacityPlanning,
+        userSpecifiedSamplingPeriod,
+        controllingPV,
+        policyName,
+        usePVAccess,
+        alias,
+        archiveFields) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ";
+        ON DUPLICATE KEY UPDATE userSpecifiedSamplingMethod  = ?, skipAliasCheck = ?, skipCapacityPlanning = ?, userSpecifiedSamplingPeriod = ?,";
+        controllingPV = ?, policyName = ?, usePVAccess = ?, alias = ?, archiveFields = ?;";
+    */
      private void putArchiveRequestParams(String query, String pvName, UserSpecifiedSamplingParams userParams, String msg) throws IOException {
 		if(pvName == null || pvName.equals("")) throw new IOException("pvName cannot be null when updating:" + msg);
 		try(Connection conn = theDataSource.getConnection()) {
@@ -499,14 +513,19 @@ public class MySQLPersistenceALS implements ConfigPersistence {
                     stmt.setString(6, userParams.getControllingPV());
                     stmt.setString(7, userParams.getPolicyName());
                     stmt.setString(8, String.valueOf(userParams.isUsePVAccess()));
+
                     String[] aliases = userParams.getAliases();
-                    String aliases_string = null;
+                    String aliases_string = "";
                     if (aliases.length > 1){
                         aliases_string = String.join(";", aliases);
                     }
                     stmt.setString(9, aliases_string);
+
                     String[] fields = userParams.getArchiveFields();
-                    String fields_string = String.join(";", fields);
+                    String fields_string = "";
+                    if (fields.length > 0){
+                        fields_string = String.join(";", fields);
+                    }
                     stmt.setString(10, fields_string);
 
                     // `update` part of the query.
