@@ -96,7 +96,8 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 
             @Override
 	public UserSpecifiedSamplingParams getArchivePVRequest(String pvName) throws IOException {
-        String query = "SELECT userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning, userSpecifiedSamplingPeriod, controllingPV, policyName, usePVAcess, alias, archiveFields FROM ArchivePVRequests WHERE pvName = ?;";
+        String query = "SELECT userSpecifiedSamplingMethod, skipAliasCheck, skipCapacityPlanning, userSpecifiedSamplingPeriod, controllingPV,";
+        query += " policyName, usePVAccess, alias, archiveFields FROM ArchivePVRequests WHERE pvName = ?;";
 		return get_archival_params(query, pvName, new UserSpecifiedSamplingParams(), "getArchivePVRequest");
 	}
 
