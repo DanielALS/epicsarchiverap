@@ -426,13 +426,27 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 						obj.setControllingPV(rs.getString(5));
 						obj.setPolicyName(rs.getString(6));
 						obj.setUsePVAccess(rs.getBoolean(7));
+
                         String alias_string = rs.getString(8);
-                        String[] aliases = alias_string.split(";");
-						obj.setAliases(aliases);
-                        // Strings delimited by ;
+                        if (alias_string.length() > 0) {
+                            String[] aliases = alias_string.split(";");
+                            obj.setAliases(aliases);
+                        }
+                        else {
+                            String[] aliases = null;
+                            obj.setAliases(aliases);
+                        }
+
                         String fieldstring = rs.getString(9);
-                        String[] fields = fieldstring.split("\\s*,\\s*");
-						obj.setArchiveFields(fields);
+                        if (fieldstring.length() > 0 ){
+                            String[] fields = fieldstring.split("\\s*,\\s*");
+                            obj.setArchiveFields(fields);
+                        }
+                        else {
+                            String[] fields = null;
+                            obj.setArchiveFields(fields);
+                        }
+
 						return obj;
 					}
 				}
