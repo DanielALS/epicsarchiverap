@@ -49,6 +49,10 @@ public class MySQLPersistenceALS implements ConfigPersistence {
 			Context envContext  = (Context) initContext.lookup("java:/comp/env");
 			//theDataSource = (DataSource)envContext.lookup("jdbc/archappl");
             String db_string = "jdbc/" +  System.getenv().get("MYSQL_DB_NAME");
+            configlogger.info("Using DB name from environment variable:" + db_string);
+            if (db_string.length() < 1){
+                throw new ConfigException("DB name env var not set.");
+            }
 			theDataSource = (DataSource)envContext.lookup(db_string);
 			configlogger.info("Found datasource called jdbc/archappl in the java:/comp/env namespace using JDNI");
 		} catch(Exception ex) {
